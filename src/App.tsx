@@ -55,42 +55,8 @@ const SearchField = styled.input`
 `;
 
 let timeout: any;
-function getAnimate(isLoading: boolean, results: string[]) {
-  if (isLoading) {
-    return "breathing";
-  }
-
-  if (results.length) {
-    return "expanded";
-  }
-
-  return "";
-}
-
-// TODO: Check if it is possible to maybe specify a different transition for each variant in one single object
-function getTransition(isLoading: boolean, results: string[]) {
-  if (isLoading) {
-    return {
-      duration: 0.9,
-      yoyo: Infinity,
-      ease: "easeInOut",
-    };
-  }
-
-  if (results.length) {
-    return {
-      duration: 0.6,
-      ease: "easeInOut",
-    };
-  }
-
-  return {};
-}
 
 function App() {
-  /**
-   * TODO: Polish "expanded" animation easing & timing
-   */
   const [isLoading, setLoading] = useState(false);
   const [results, setResults] = useState<string[]>([]);
   const animationControl = useAnimation();
@@ -104,39 +70,60 @@ function App() {
     timeout = setTimeout(() => {
       setResults(["Address 1", "Address 2", "Address 3"]);
       setLoading(false);
-    }, 2000);
+    }, 3000);
   };
   const debouncedOnChange = useMemo(() => debounce(onSearch, 400), []);
 
   useEffect(() => {
     if (isLoading) {
-      animationControl.start("breathing");
-    }
+      (async function () {
+        if (results) {
+          await animationControl.start(
+            {
+              scaleY: 1,
+              scaleX: 1,
+            },
+            {
+              duration: 0.3,
+              type: "spring",
+              mass: 1,
+              tension: 5,
+              stiffness: 40,
+            }
+          );
+        }
 
-    if (results.length) {
-      animationControl.stop();
-      animationControl.start("expanded");
+        return animationControl.start(
+          {
+            scaleY: 1.03,
+            scaleX: 1.03,
+          },
+          {
+            duration: 0.9,
+            yoyo: Infinity,
+            ease: "easeInOut",
+            type: "tween",
+          }
+        );
+      })();
+    } else if (results.length) {
+      animationControl.start(
+        {
+          scaleX: 1.03,
+          scaleY: 5,
+        },
+        {
+          duration: 0.6,
+          type: "spring",
+        }
+      );
     }
-  }, [isLoading, results]);
-
-  console.log({ isLoading, getAnimate: getAnimate(isLoading, results) });
+  }, [isLoading, results, animationControl]);
 
   return (
     <Root>
       <Content>
-        <SearchFieldWrapper
-          variants={{
-            breathing: {
-              scale: 1.03,
-            },
-            expanded: {
-              scaleX: 1.03,
-              scaleY: 5,
-            },
-          }}
-          transition={getTransition(isLoading, results)}
-          animate={animationControl}
-        />
+        <SearchFieldWrapper animate={animationControl} />
         <SearchField
           type="text"
           placeholder="type something..."
