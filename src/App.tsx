@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+  ChangeEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import styled from "@emotion/styled";
 import { motion, useAnimation } from "framer-motion";
 import debounce from "lodash.debounce";
@@ -49,8 +55,13 @@ const SearchField = styled.input`
 
   &::placeholder {
     font-size: 0.8em;
-    opacity: 0.6;
+    opacity: 0.7;
     font-style: italic;
+    transition: opacity 200ms ease;
+  }
+
+  &:focus::placeholder {
+    opacity: 0.4;
   }
 `;
 
@@ -58,39 +69,64 @@ let timeout: any;
 
 function App() {
   const [isLoading, setLoading] = useState(false);
+  const [value, setValue] = useState("");
   const [results, setResults] = useState<string[]>([]);
   const animationControl = useAnimation();
-  const onSearch = () => {
-    setLoading(true);
+  const onSearch = useCallback(
+    ({ target: { value } }: ChangeEvent<HTMLInputElement>) => {
+      if (value) {
+        setLoading(true);
 
-    if (timeout) {
-      clearTimeout(timeout);
-    }
+        if (timeout) {
+          clearTimeout(timeout);
+        }
 
-    timeout = setTimeout(() => {
-      setResults(["Address 1", "Address 2", "Address 3"]);
-      setLoading(false);
-    }, 3000);
+        timeout = setTimeout(() => {
+          setResults(["Address 1", "Address 2", "Address 3"]);
+          setLoading(false);
+        }, 3000);
+      }
+    },
+    [setLoading, setResults]
+  );
+
+  const animateRetract = useCallback(() => {
+    return animationControl.start(
+      {
+        scaleY: 1,
+        scaleX: 1,
+      },
+      {
+        duration: 0.3,
+        type: "spring",
+        mass: 1,
+        tension: 5,
+        stiffness: 40,
+      }
+    );
+  }, [animationControl]);
+
+  const debouncedSearch = useMemo(() => {
+    const debounced = debounce(onSearch, 400);
+
+    return (event: ChangeEvent<HTMLInputElement>) => {
+      event.persist();
+
+      return debounced(event);
+    };
+  }, [onSearch]);
+
+  const onChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setValue(event.target.value);
+
+    debouncedSearch(event);
   };
-  const debouncedOnChange = useMemo(() => debounce(onSearch, 400), []);
 
   useEffect(() => {
     if (isLoading) {
       (async function () {
         if (results) {
-          await animationControl.start(
-            {
-              scaleY: 1,
-              scaleX: 1,
-            },
-            {
-              duration: 0.3,
-              type: "spring",
-              mass: 1,
-              tension: 5,
-              stiffness: 40,
-            }
-          );
+          await animateRetract();
         }
 
         return animationControl.start(
@@ -120,6 +156,12 @@ function App() {
     }
   }, [isLoading, results, animationControl]);
 
+  useEffect(() => {
+    if (!value) {
+      animateRetract();
+    }
+  }, [value, animateRetract]);
+
   return (
     <Root>
       <Content>
@@ -127,7 +169,7 @@ function App() {
         <SearchField
           type="text"
           placeholder="type something..."
-          onChange={() => debouncedOnChange()}
+          onChange={onChange}
         />
       </Content>
     </Root>
