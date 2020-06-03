@@ -10,6 +10,8 @@ import { motion, useAnimation } from "framer-motion";
 import debounce from "lodash.debounce";
 import { gql } from "apollo-boost";
 import { useQuery } from "@apollo/react-hooks";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBox } from "@fortawesome/free-solid-svg-icons";
 
 const searchSchema = gql`
   query searchUsers($query: String!) {
@@ -21,6 +23,9 @@ const searchSchema = gql`
           name
           url
           login
+          repositories {
+            totalCount
+          }
         }
       }
     }
@@ -97,13 +102,26 @@ const ResultList = styled.ul`
   overflow: auto;
 `;
 
-const Result = styled.li`
+const Result = styled.a`
   display: flex;
   align-items: center;
+  justify-content: space-between;
   height: 60px;
   padding: 0 16px;
-  margin: 0;
   color: #000;
+  background-color: transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-top-color 250ms ease-out, background-color 250ms ease-out;
+
+  &:not(:first-child) {
+    border-top: 1px solid #ddd;
+  }
+
+  &:hover {
+    border-top-color: transparent;
+    background-color: #ddd;
+  }
 `;
 
 const UserAvatar = styled.img`
@@ -127,11 +145,30 @@ const UserLogin = styled.span`
   opacity: 0.6;
 `;
 
+const UserInfo = styled.div`
+  display: flex;
+  align-items: center;
+`;
+
+const RepositoriesIcon = styled(FontAwesomeIcon)`
+  font-size: 12px;
+  opacity: 0.7;
+`;
+
+const Repositories = styled.span`
+  font-size: 14px;
+  display: inline-block;
+  margin-left: 4px;
+`;
+
 interface IQueryResultUser {
   avatarUrl: string;
   name: string | null;
   url: string;
   login: string;
+  repositories: {
+    totalCount: number;
+  };
 }
 
 interface ISearchQueryResult {
@@ -227,8 +264,6 @@ function App() {
     }
   }, [value, animateRetract]);
 
-  console.log({ loading, data, error });
-
   return (
     <Root>
       <Content>
@@ -244,11 +279,22 @@ function App() {
 
             if (name) {
               return (
-                <Result>
-                  <UserAvatar src={result.avatarUrl} alt={name} />
-                  <UserName>{name}</UserName>
-                  <UserLogin>@{result.login}</UserLogin>
-                </Result>
+                <li key={result.login}>
+                  <Result href={result.url} target="_blank">
+                    <UserInfo>
+                      <UserAvatar src={result.avatarUrl} alt={name} />
+                      <UserName>{name}</UserName>
+                      <UserLogin>@{result.login}</UserLogin>
+                    </UserInfo>
+
+                    <UserInfo>
+                      <RepositoriesIcon icon={faBox} />
+                      <Repositories>
+                        {result.repositories.totalCount}
+                      </Repositories>
+                    </UserInfo>
+                  </Result>
+                </li>
               );
             }
 
