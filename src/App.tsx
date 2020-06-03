@@ -8,6 +8,24 @@ import React, {
 import styled from "@emotion/styled";
 import { motion, useAnimation } from "framer-motion";
 import debounce from "lodash.debounce";
+import { gql } from "apollo-boost";
+import { useQuery } from "@apollo/react-hooks";
+
+const searchSchema = gql`
+  query searchUsers($query: String!) {
+    search(query: $query, type: USER, first: 10) {
+      userCount
+      nodes {
+        ... on User {
+          avatarUrl
+          name
+          url
+          login
+        }
+      }
+    }
+  }
+`;
 
 const DIMENSIONS = {
   INPUT: {
@@ -25,6 +43,10 @@ const Root = styled.div`
   font-size: 24px;
   font-family: sans-serif;
   padding-top: 20%;
+
+  * {
+    box-sizing: border-box;
+  }
 `;
 
 const Content = styled.div`
@@ -65,30 +87,73 @@ const SearchField = styled.input`
   }
 `;
 
-let timeout: any;
+const ResultList = styled.ul`
+  position: relative;
+  z-index: 2;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  height: 300px;
+  overflow: auto;
+`;
+
+const Result = styled.li`
+  display: flex;
+  align-items: center;
+  height: 60px;
+  padding: 0 16px;
+  margin: 0;
+  color: #000;
+`;
+
+const UserAvatar = styled.img`
+  height: 40px;
+  width: 40px;
+  border-radius: 50%;
+  border: 2px solid #333;
+`;
+
+const UserName = styled.span`
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 14px;
+  font-weight: bold;
+`;
+
+const UserLogin = styled.span`
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 12px;
+  opacity: 0.6;
+`;
+
+interface IQueryResultUser {
+  avatarUrl: string;
+  name: string | null;
+  url: string;
+  login: string;
+}
+
+interface ISearchQueryResult {
+  search: {
+    userCount: number;
+    nodes: IQueryResultUser[];
+  };
+}
 
 function App() {
-  const [isLoading, setLoading] = useState(false);
   const [value, setValue] = useState("");
-  const [results, setResults] = useState<string[]>([]);
+  const [query, setQuery] = useState("");
+  const { loading, data, error } = useQuery<ISearchQueryResult>(searchSchema, {
+    variables: { query },
+    skip: !query,
+  });
   const animationControl = useAnimation();
   const onSearch = useCallback(
-    ({ target: { value } }: ChangeEvent<HTMLInputElement>) => {
-      if (value) {
-        setLoading(true);
-
-        if (timeout) {
-          clearTimeout(timeout);
-        }
-
-        timeout = setTimeout(() => {
-          setResults(["Address 1", "Address 2", "Address 3"]);
-          setLoading(false);
-        }, 3000);
-      }
-    },
-    [setLoading, setResults]
+    ({ target: { value } }: ChangeEvent<HTMLInputElement>) => setQuery(value),
+    [setQuery]
   );
+  const results = data ? data.search.nodes : [];
 
   const animateRetract = useCallback(() => {
     return animationControl.start(
@@ -123,9 +188,9 @@ function App() {
   };
 
   useEffect(() => {
-    if (isLoading) {
+    if (loading) {
       (async function () {
-        if (results) {
+        if (results && results.length) {
           await animateRetract();
         }
 
@@ -142,10 +207,10 @@ function App() {
           }
         );
       })();
-    } else if (results.length) {
+    } else if (results && results.length) {
       animationControl.start(
         {
-          scaleX: 1.03,
+          scaleX: 1,
           scaleY: 5,
         },
         {
@@ -154,13 +219,15 @@ function App() {
         }
       );
     }
-  }, [isLoading, results, animationControl]);
+  }, [loading, results, animationControl, animateRetract]);
 
   useEffect(() => {
     if (!value) {
       animateRetract();
     }
   }, [value, animateRetract]);
+
+  console.log({ loading, data, error });
 
   return (
     <Root>
@@ -171,6 +238,23 @@ function App() {
           placeholder="type something..."
           onChange={onChange}
         />
+        <ResultList>
+          {results.map((result) => {
+            const { name } = result;
+
+            if (name) {
+              return (
+                <Result>
+                  <UserAvatar src={result.avatarUrl} alt={name} />
+                  <UserName>{name}</UserName>
+                  <UserLogin>@{result.login}</UserLogin>
+                </Result>
+              );
+            }
+
+            return null;
+          })}
+        </ResultList>
       </Content>
     </Root>
   );
