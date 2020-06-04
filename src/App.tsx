@@ -5,13 +5,26 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import styled from "@emotion/styled";
-import { motion, useAnimation } from "framer-motion";
+import { useAnimation, Variants } from "framer-motion";
 import debounce from "lodash.debounce";
 import { gql } from "apollo-boost";
 import { useQuery } from "@apollo/react-hooks";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBox } from "@fortawesome/free-solid-svg-icons";
+import {
+  Content,
+  Repositories,
+  RepositoriesIcon,
+  Result,
+  ResultList,
+  ResultWrapper,
+  Root,
+  SearchField,
+  SearchFieldWrapper,
+  UserAvatar,
+  UserInfo,
+  UserLogin,
+  UserName,
+} from "./styled";
 
 const searchSchema = gql`
   query searchUsers($query: String!) {
@@ -32,134 +45,34 @@ const searchSchema = gql`
   }
 `;
 
-const DIMENSIONS = {
-  INPUT: {
-    INITIAL_WIDTH: 400,
-    INITIAL_HEIGHT: 75,
+const resultItemVariant: Variants = {
+  visible: (i: number) => ({
+    opacity: 1,
+    transition: {
+      delay: i * 0.15,
+      easing: "cubic-bezier(0.33, 1, 0.68, 1)",
+    },
+  }),
+  hidden: {
+    opacity: 0,
+    transition: {
+      easing: "cubic-bezier(0.33, 1, 0.68, 1)",
+    },
   },
 };
 
-const Root = styled.div`
-  display: flex;
-  justify-content: center;
-  height: 100vh;
-  color: #fff;
-  background: cornflowerblue;
-  font-size: 24px;
-  font-family: sans-serif;
-  padding-top: 20%;
-
-  * {
-    box-sizing: border-box;
-  }
-`;
-
-const Content = styled.div`
-  position: relative;
-`;
-
-const SearchFieldWrapper = styled(motion.div)`
-  position: absolute;
-  z-index: 2;
-  top: 0;
-  left: 0;
-  width: ${DIMENSIONS.INPUT.INITIAL_WIDTH}px;
-  height: ${DIMENSIONS.INPUT.INITIAL_HEIGHT}px;
-  background-color: #fff;
-  transform-origin: top center;
-`;
-
-const SearchField = styled.input`
-  position: relative;
-  border: 0;
-  outline: 0;
-  width: ${DIMENSIONS.INPUT.INITIAL_WIDTH}px;
-  height: ${DIMENSIONS.INPUT.INITIAL_HEIGHT}px;
-  font-size: 30px;
-  padding: 0 16px;
-  background-color: transparent;
-  z-index: 2;
-
-  &::placeholder {
-    font-size: 0.8em;
-    opacity: 0.7;
-    font-style: italic;
-    transition: opacity 200ms ease;
-  }
-
-  &:focus::placeholder {
-    opacity: 0.4;
-  }
-`;
-
-const ResultList = styled.ul`
-  position: relative;
-  z-index: 2;
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  height: 300px;
-  overflow: auto;
-`;
-
-const Result = styled.a`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 60px;
-  padding: 0 16px;
-  color: #000;
-  background-color: transparent;
-  cursor: pointer;
-  text-decoration: none;
-  transition: border-top-color 250ms ease-out, background-color 250ms ease-out;
-
-  &:not(:first-child) {
-    border-top: 1px solid #ddd;
-  }
-
-  &:hover {
-    border-top-color: transparent;
-    background-color: #ddd;
-  }
-`;
-
-const UserAvatar = styled.img`
-  height: 40px;
-  width: 40px;
-  border-radius: 50%;
-  border: 2px solid #333;
-`;
-
-const UserName = styled.span`
-  display: inline-block;
-  margin-left: 8px;
-  font-size: 14px;
-  font-weight: bold;
-`;
-
-const UserLogin = styled.span`
-  display: inline-block;
-  margin-left: 4px;
-  font-size: 12px;
-  opacity: 0.6;
-`;
-
-const UserInfo = styled.div`
-  display: flex;
-  align-items: center;
-`;
-
-const RepositoriesIcon = styled(FontAwesomeIcon)`
-  font-size: 12px;
-  opacity: 0.7;
-`;
-
-const Repositories = styled.span`
-  font-size: 14px;
-  display: inline-block;
-  margin-left: 4px;
-`;
+const resultItemAnchorVariant: Variants = {
+  visible: (i: number) => ({
+    y: 0,
+    transition: {
+      type: "spring",
+      delay: i * 0.15,
+    },
+  }),
+  hidden: {
+    y: -3,
+  },
+};
 
 interface IQueryResultUser {
   avatarUrl: string;
@@ -220,7 +133,6 @@ function App() {
 
   const onChange = (event: ChangeEvent<HTMLInputElement>) => {
     setValue(event.target.value);
-
     debouncedSearch(event);
   };
 
@@ -273,14 +185,26 @@ function App() {
           placeholder="type something..."
           onChange={onChange}
         />
+
         <ResultList>
-          {results.map((result) => {
+          {results.map((result, i) => {
             const { name } = result;
 
             if (name) {
               return (
-                <li key={result.login}>
-                  <Result href={result.url} target="_blank">
+                <ResultWrapper
+                  key={result.login}
+                  initial="hidden"
+                  animate="visible"
+                  variants={resultItemVariant}
+                  custom={i}
+                >
+                  <Result
+                    href={result.url}
+                    target="_blank"
+                    variants={resultItemAnchorVariant}
+                    custom={i}
+                  >
                     <UserInfo>
                       <UserAvatar src={result.avatarUrl} alt={name} />
                       <UserName>{name}</UserName>
@@ -294,7 +218,7 @@ function App() {
                       </Repositories>
                     </UserInfo>
                   </Result>
-                </li>
+                </ResultWrapper>
               );
             }
 
