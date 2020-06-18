@@ -92,6 +92,10 @@ interface ISearchQueryResult {
 }
 
 function App() {
+  /**
+   * TODO: Coordinate the retraction of the results on a state variable rather than results or value
+   *       This way its possible to properly wait for animating out the list items.
+   */
   const [value, setValue] = useState("");
   const [query, setQuery] = useState("");
   const { loading, data, error } = useQuery<ISearchQueryResult>(searchSchema, {
