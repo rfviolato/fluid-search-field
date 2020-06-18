@@ -1,3 +1,4 @@
+import React, { ComponentType } from "react";
 import styled from "@emotion/styled";
 import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -77,18 +78,22 @@ export const ResultWrapper = styled(motion.li)`
   overflow: hidden;
 `;
 
-export const Result = styled(motion.a)`
+interface ResultProps {
+  isLoading?: boolean;
+}
+
+export const Result = styled(motion.a)<ResultProps>`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 60px;
+  height: 58px;
   padding: 0 16px;
   color: #000;
   background-color: transparent;
   cursor: pointer;
   text-decoration: none;
-  transition: background-color 250ms ease-out;
-  will-change: transform;
+  transition: background-color 250ms ease-out, opacity 250ms ease-out;
+  opacity: ${({ isLoading }) => (isLoading ? "0.4" : "1")};
 
   &:hover {
     background-color: #ddd;

@@ -92,6 +92,13 @@ interface ISearchQueryResult {
   };
 }
 
+/*
+ * TODO:
+ *  - Handle less than 5 results
+ *  - Image pre-loading
+ *  - Handle weird search terms that produce API errors
+ * */
+
 function App() {
   const [value, setValue] = useState("");
   const [query, setQuery] = useState("");
@@ -140,25 +147,19 @@ function App() {
 
   useEffect(() => {
     if (loading) {
-      (async function () {
-        if (results && results.length) {
-          await animateRetract();
+      animationControl.start(
+        {
+          scaleY: results.length ? 5.03 : 1.03,
+          scaleX: 1.03,
+        },
+        {
+          duration: 0.9,
+          yoyo: Infinity,
+          ease: "easeInOut",
+          type: "tween",
         }
-
-        return animationControl.start(
-          {
-            scaleY: 1.03,
-            scaleX: 1.03,
-          },
-          {
-            duration: 0.9,
-            yoyo: Infinity,
-            ease: "easeInOut",
-            type: "tween",
-          }
-        );
-      })();
-    } else if (results && results.length) {
+      );
+    } else if (results.length) {
       animationControl.start(
         {
           scaleX: 1,
@@ -231,6 +232,7 @@ function App() {
                       exit="hidden"
                       variants={resultItemAnchorVariant}
                       custom={i}
+                      isLoading={loading}
                     >
                       <UserInfo>
                         <UserAvatar src={result.avatarUrl} alt={name} />
