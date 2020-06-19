@@ -3,9 +3,10 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
-import { useAnimation, Variants } from "framer-motion";
+import { useAnimation, Variants, AnimatePresence } from "framer-motion";
 import debounce from "lodash.debounce";
 import { gql } from "apollo-boost";
 import { useQuery } from "@apollo/react-hooks";
@@ -91,6 +92,13 @@ interface ISearchQueryResult {
   };
 }
 
+/*
+ * TODO:
+ *  - Handle less than 5 results
+ *  - Image pre-loading
+ *  - Handle weird search terms that produce API errors
+ * */
+
 function App() {
   /**
    * TODO: Coordinate the retraction of the results on a state variable rather than results or value
@@ -98,6 +106,7 @@ function App() {
    */
   const [value, setValue] = useState("");
   const [query, setQuery] = useState("");
+  const oldValue = useRef<string>();
   const { loading, data, error } = useQuery<ISearchQueryResult>(searchSchema, {
     variables: { query },
     skip: !query,
@@ -118,9 +127,9 @@ function App() {
       {
         duration: 0.3,
         type: "spring",
-        mass: 1,
-        tension: 5,
-        stiffness: 40,
+        mass: 0.5,
+        tension: 1,
+        stiffness: 50,
       }
     );
   }, [animationControl]);
@@ -142,25 +151,19 @@ function App() {
 
   useEffect(() => {
     if (loading) {
-      (async function () {
-        if (results && results.length) {
-          await animateRetract();
+      animationControl.start(
+        {
+          scaleY: results.length ? 5.03 : 1.03,
+          scaleX: 1.03,
+        },
+        {
+          duration: 0.9,
+          yoyo: Infinity,
+          ease: "easeInOut",
+          type: "tween",
         }
-
-        return animationControl.start(
-          {
-            scaleY: 1.03,
-            scaleX: 1.03,
-          },
-          {
-            duration: 0.9,
-            yoyo: Infinity,
-            ease: "easeInOut",
-            type: "tween",
-          }
-        );
-      })();
-    } else if (results && results.length) {
+      );
+    } else if (results.length) {
       animationControl.start(
         {
           scaleX: 1,
@@ -169,16 +172,36 @@ function App() {
         {
           duration: 0.6,
           type: "spring",
+          mass: 0.5,
+          tension: 1,
         }
       );
     }
   }, [loading, results, animationControl, animateRetract]);
 
   useEffect(() => {
-    if (!value) {
-      animateRetract();
+    if (!value && oldValue.current) {
+      (async function () {
+        await animationControl.start(
+          {
+            scaleX: 1.03,
+            scaleY: 5.05,
+          },
+          {
+            duration: 0.1,
+            type: "spring",
+            mass: 1,
+            tension: 5,
+            stiffness: 40,
+          }
+        );
+
+        await animateRetract();
+      })();
     }
-  }, [value, animateRetract]);
+
+    oldValue.current = value;
+  }, [oldValue, value, animateRetract, animationControl]);
 
   return (
     <Root>
@@ -191,43 +214,50 @@ function App() {
         />
 
         <ResultList>
-          {results.map((result, i) => {
-            const { name } = result;
+          <AnimatePresence>
+            {results.map((result, i) => {
+              const { name } = result;
 
-            if (name) {
-              return (
-                <ResultWrapper
-                  key={result.login}
-                  initial="hidden"
-                  animate="visible"
-                  variants={resultItemVariant}
-                  custom={i}
-                >
-                  <Result
-                    href={result.url}
-                    target="_blank"
-                    variants={resultItemAnchorVariant}
+              if (name) {
+                return (
+                  <ResultWrapper
+                    key={result.login}
+                    initial="hidden"
+                    animate="visible"
+                    exit="hidden"
+                    variants={resultItemVariant}
                     custom={i}
                   >
-                    <UserInfo>
-                      <UserAvatar src={result.avatarUrl} alt={name} />
-                      <UserName>{name}</UserName>
-                      <UserLogin>@{result.login}</UserLogin>
-                    </UserInfo>
+                    <Result
+                      href={result.url}
+                      target="_blank"
+                      initial="hidden"
+                      animate="visible"
+                      exit="hidden"
+                      variants={resultItemAnchorVariant}
+                      custom={i}
+                      isLoading={loading}
+                    >
+                      <UserInfo>
+                        <UserAvatar src={result.avatarUrl} alt={name} />
+                        <UserName>{name}</UserName>
+                        <UserLogin>@{result.login}</UserLogin>
+                      </UserInfo>
 
-                    <UserInfo>
-                      <RepositoriesIcon icon={faBox} />
-                      <Repositories>
-                        {result.repositories.totalCount}
-                      </Repositories>
-                    </UserInfo>
-                  </Result>
-                </ResultWrapper>
-              );
-            }
+                      <UserInfo>
+                        <RepositoriesIcon icon={faBox} />
+                        <Repositories>
+                          {result.repositories.totalCount}
+                        </Repositories>
+                      </UserInfo>
+                    </Result>
+                  </ResultWrapper>
+                );
+              }
 
-            return null;
-          })}
+              return null;
+            })}
+          </AnimatePresence>
         </ResultList>
       </Content>
     </Root>
