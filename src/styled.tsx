@@ -1,4 +1,3 @@
-import React, { ComponentType } from "react";
 import styled from "@emotion/styled";
 import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -7,6 +6,10 @@ export const DIMENSIONS = {
   INPUT: {
     INITIAL_WIDTH: 400,
     INITIAL_HEIGHT: 75,
+  },
+  RESULT: {
+    HEIGHT: 58,
+    BORDER: 1,
   },
 };
 
@@ -74,7 +77,7 @@ export const ResultList = styled.ul`
 `;
 
 export const ResultWrapper = styled(motion.li)`
-  border-top: 1px solid #ddd;
+  border-top: ${DIMENSIONS.RESULT.BORDER}px solid #ddd;
   overflow: hidden;
 `;
 
@@ -86,7 +89,7 @@ export const Result = styled(motion.a)<ResultProps>`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 58px;
+  height: ${DIMENSIONS.RESULT.HEIGHT}px;
   padding: 0 16px;
   color: #000;
   background-color: transparent;

@@ -13,6 +13,7 @@ import { useQuery } from "@apollo/react-hooks";
 import { faBox } from "@fortawesome/free-solid-svg-icons";
 import {
   Content,
+  DIMENSIONS,
   Repositories,
   RepositoriesIcon,
   Result,
@@ -45,6 +46,21 @@ const searchSchema = gql`
     }
   }
 `;
+
+function getResultsWrapperScaleValue(
+  numberOfResults: number,
+  maxResultsDisplayed: number = 5
+): number {
+  const initialHeight = DIMENSIONS.INPUT.INITIAL_HEIGHT;
+  const resultHeight = DIMENSIONS.RESULT.HEIGHT + DIMENSIONS.RESULT.BORDER; // border;
+  const resultsToMeasure =
+    numberOfResults > maxResultsDisplayed
+      ? maxResultsDisplayed
+      : numberOfResults;
+  const targetHeight = initialHeight + resultsToMeasure * resultHeight;
+
+  return targetHeight / initialHeight;
+}
 
 const resultItemVariant: Variants = {
   visible: (i: number) => ({
@@ -95,15 +111,16 @@ interface ISearchQueryResult {
 /*
  * TODO:
  *  - Handle less than 5 results
+ *  - Show "no results found" indicator
  *  - Image pre-loading
+ *
+ *  BUGS:
+ *  - Type something, wait for results, erase everything and after reaching value.length === 0, start typing again,
+ *    The component will animate retract, but that's undesired
  *  - Handle weird search terms that produce API errors
  * */
 
 function App() {
-  /**
-   * TODO: Coordinate the retraction of the results on a state variable rather than results or value
-   *       This way its possible to properly wait for animating out the list items.
-   */
   const [value, setValue] = useState("");
   const [query, setQuery] = useState("");
   const oldValue = useRef<string>();
@@ -125,11 +142,9 @@ function App() {
         scaleX: 1,
       },
       {
-        duration: 0.3,
         type: "spring",
-        mass: 0.5,
-        tension: 1,
-        stiffness: 50,
+        mass: 0.6,
+        damping: 13,
       }
     );
   }, [animationControl]);
@@ -157,7 +172,7 @@ function App() {
           scaleX: 1.03,
         },
         {
-          duration: 0.9,
+          duration: 0.8,
           yoyo: Infinity,
           ease: "easeInOut",
           type: "tween",
@@ -167,13 +182,12 @@ function App() {
       animationControl.start(
         {
           scaleX: 1,
-          scaleY: 5,
+          scaleY: getResultsWrapperScaleValue(results.length),
         },
         {
-          duration: 0.6,
           type: "spring",
-          mass: 0.5,
-          tension: 1,
+          mass: 0.8,
+          damping: 13,
         }
       );
     }
@@ -188,11 +202,9 @@ function App() {
             scaleY: 5.05,
           },
           {
-            duration: 0.1,
             type: "spring",
-            mass: 1,
-            tension: 5,
             stiffness: 40,
+            damping: 8,
           }
         );
 
