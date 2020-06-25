@@ -26,7 +26,7 @@ import {
   UserLogin,
   UserName,
 } from "./styled";
-import { LazyImage } from './LazyImage';
+import { LazyImage } from "./LazyImage";
 
 const searchSchema = gql`
   query searchUsers($query: String!) {
@@ -66,7 +66,7 @@ const resultItemVariant: Variants = {
   visible: (i: number) => ({
     opacity: 1,
     transition: {
-      delay: i * 0.15,
+      delay: (i + 1) * 0.15,
       easing: "cubic-bezier(0.33, 1, 0.68, 1)",
     },
   }),
@@ -123,6 +123,7 @@ function App() {
   const [value, setValue] = useState("");
   const [query, setQuery] = useState("");
   const oldValue = useRef<string>();
+  const oldResultsLength = useRef<number>(0);
   const { loading, data, error } = useQuery<ISearchQueryResult>(searchSchema, {
     variables: { query },
     skip: !query,
@@ -133,7 +134,10 @@ function App() {
     [setQuery]
   );
   const results = data ? data.search.nodes : [];
-  const filteredResults = results.filter((result) => !!result.name);
+  const filteredResults = useMemo(
+    () => results.filter((result) => !!result.name),
+    [results]
+  );
 
   const animateRetract = useCallback(() => {
     return animationControl.start(
@@ -165,10 +169,16 @@ function App() {
   };
 
   useEffect(() => {
+    const { current: previousResultsLength } = oldResultsLength;
+
     if (loading) {
+      const scaleIncrease = 0.03;
+      const scaleY =
+        getResultsWrapperScaleValue(filteredResults.length) + scaleIncrease;
+
       animationControl.start(
         {
-          scaleY: results.length ? 5.03 : 1.03,
+          scaleY,
           scaleX: 1.03,
         },
         {
@@ -178,7 +188,7 @@ function App() {
           type: "tween",
         }
       );
-    } else if (results.length) {
+    } else if (filteredResults.length) {
       animationControl.start(
         {
           scaleX: 1,
@@ -190,32 +200,30 @@ function App() {
           damping: 13,
         }
       );
+    } else if (filteredResults.length === 0 && previousResultsLength > 0) {
+      const scaleX = 1.03;
+      const scaleY = getResultsWrapperScaleValue(previousResultsLength) + 0.05;
+
+      animationControl.start(
+        {
+          scaleX,
+          scaleY,
+        },
+        {
+          type: "spring",
+          stiffness: 40,
+          damping: 8,
+        }
+      );
+
+      setTimeout(animateRetract, 300);
     }
-  }, [loading, results, animationControl, animateRetract]);
+  }, [loading, filteredResults, animationControl, animateRetract]);
 
   useEffect(() => {
-    const { current: previousValue } = oldValue;
-
-    if (!value && previousValue) {
-      (async function () {
-        await animationControl.start(
-          {
-            scaleX: 1.03,
-            scaleY: 5.05,
-          },
-          {
-            type: "spring",
-            stiffness: 40,
-            damping: 8,
-          }
-        );
-
-        await animateRetract();
-      })();
-    }
-
     oldValue.current = value;
-  }, [oldValue, value, animateRetract, animationControl]);
+    oldResultsLength.current = filteredResults.length;
+  }, [value, filteredResults]);
 
   return (
     <Root>
@@ -234,7 +242,7 @@ function App() {
 
               return (
                 <ResultWrapper
-                  key={result.login}
+                  key={`${result.login}${i}`}
                   initial="hidden"
                   animate="visible"
                   exit="hidden"
@@ -252,7 +260,12 @@ function App() {
                     isLoading={loading}
                   >
                     <UserInfo>
-                      <LazyImage width={DIMENSIONS.AVATAR.SIZE} height={DIMENSIONS.AVATAR.SIZE} src={result.avatarUrl} alt={name || 'User avatar'} />
+                      <LazyImage
+                        width={DIMENSIONS.AVATAR.SIZE}
+                        height={DIMENSIONS.AVATAR.SIZE}
+                        src={result.avatarUrl}
+                        alt={name || "User avatar"}
+                      />
                       <UserName>{name}</UserName>
                       <UserLogin>@{result.login}</UserLogin>
                     </UserInfo>

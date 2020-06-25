@@ -1,5 +1,5 @@
 import styled from "@emotion/styled";
-import { keyframes } from '@emotion/core';
+import { keyframes } from "@emotion/core";
 import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
@@ -97,7 +97,7 @@ export const ResultWrapper = styled(motion.li)`
   overflow: hidden;
 `;
 
-export const Result = styled(motion.a) <ResultProps>`
+export const Result = styled(motion.a)<ResultProps>`
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -162,7 +162,7 @@ export const Img = styled.img<ImgProps>`
   height: ${DIMENSIONS.AVATAR.SIZE}px;
   width: ${DIMENSIONS.AVATAR.SIZE}px;
   transition: opacity 200ms ease-out;
-  opacity: ${({ isDisplayed }) => isDisplayed ? 1 : 0};
+  opacity: ${({ isDisplayed }) => (isDisplayed ? 1 : 0)};
 `;
 
 export const LoadingIconWrapper = styled.div<LoadingIconWrapperProps>`
@@ -175,7 +175,7 @@ export const LoadingIconWrapper = styled.div<LoadingIconWrapperProps>`
   align-items: center;
   justify-content: center;
   transition: opacity 200ms ease-out;
-  opacity: ${({ isDisplayed }) => isDisplayed ? 1 : 0};
+  opacity: ${({ isDisplayed }) => (isDisplayed ? 1 : 0)};
 `;
 
 const glow = keyframes`
