@@ -1,6 +1,19 @@
 import styled from "@emotion/styled";
+import { keyframes } from '@emotion/core';
 import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+
+interface ResultProps {
+  isLoading?: boolean;
+}
+
+interface LoadingIconWrapperProps {
+  isDisplayed?: boolean;
+}
+
+interface ImgProps {
+  isDisplayed?: boolean;
+}
 
 export const DIMENSIONS = {
   INPUT: {
@@ -10,6 +23,9 @@ export const DIMENSIONS = {
   RESULT: {
     HEIGHT: 58,
     BORDER: 1,
+  },
+  AVATAR: {
+    SIZE: 40,
   },
 };
 
@@ -81,11 +97,7 @@ export const ResultWrapper = styled(motion.li)`
   overflow: hidden;
 `;
 
-interface ResultProps {
-  isLoading?: boolean;
-}
-
-export const Result = styled(motion.a)<ResultProps>`
+export const Result = styled(motion.a) <ResultProps>`
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -101,13 +113,6 @@ export const Result = styled(motion.a)<ResultProps>`
   &:hover {
     background-color: #ddd;
   }
-`;
-
-export const UserAvatar = styled.img`
-  height: 40px;
-  width: 40px;
-  border-radius: 50%;
-  border: 2px solid #333;
 `;
 
 export const UserName = styled.span`
@@ -142,4 +147,43 @@ export const Repositories = styled.span`
   font-size: 14px;
   display: inline-block;
   margin-left: 4px;
+`;
+
+export const ImageWrapper = styled.div`
+  position: relative;
+  height: ${DIMENSIONS.AVATAR.SIZE}px;
+  width: ${DIMENSIONS.AVATAR.SIZE}px;
+  border-radius: 50%;
+  border: 2px solid #333;
+  overflow: hidden;
+`;
+
+export const Img = styled.img<ImgProps>`
+  height: ${DIMENSIONS.AVATAR.SIZE}px;
+  width: ${DIMENSIONS.AVATAR.SIZE}px;
+  transition: opacity 200ms ease-out;
+  opacity: ${({ isDisplayed }) => isDisplayed ? 1 : 0};
+`;
+
+export const LoadingIconWrapper = styled.div<LoadingIconWrapperProps>`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 200ms ease-out;
+  opacity: ${({ isDisplayed }) => isDisplayed ? 1 : 0};
+`;
+
+const glow = keyframes`
+  50% {
+    opacity: 0.5;
+  }
+`;
+
+export const LoadingIcon = styled(FontAwesomeIcon)`
+  animation: ${glow} 1200ms ease-in-out infinite;
 `;

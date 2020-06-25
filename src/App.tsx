@@ -12,8 +12,8 @@ import { gql } from "apollo-boost";
 import { useQuery } from "@apollo/react-hooks";
 import { faBox } from "@fortawesome/free-solid-svg-icons";
 import {
-  Content,
   DIMENSIONS,
+  Content,
   Repositories,
   RepositoriesIcon,
   Result,
@@ -22,11 +22,11 @@ import {
   Root,
   SearchField,
   SearchFieldWrapper,
-  UserAvatar,
   UserInfo,
   UserLogin,
   UserName,
 } from "./styled";
+import { LazyImage } from './LazyImage';
 
 const searchSchema = gql`
   query searchUsers($query: String!) {
@@ -110,9 +110,8 @@ interface ISearchQueryResult {
 
 /*
  * TODO:
- *  - Handle less than 5 results
  *  - Show "no results found" indicator
- *  - Image pre-loading
+ *  - Error handling
  *
  *  BUGS:
  *  - Type something, wait for results, erase everything and after reaching value.length === 0, start typing again,
@@ -134,6 +133,7 @@ function App() {
     [setQuery]
   );
   const results = data ? data.search.nodes : [];
+  const filteredResults = results.filter((result) => !!result.name);
 
   const animateRetract = useCallback(() => {
     return animationControl.start(
@@ -182,7 +182,7 @@ function App() {
       animationControl.start(
         {
           scaleX: 1,
-          scaleY: getResultsWrapperScaleValue(results.length),
+          scaleY: getResultsWrapperScaleValue(filteredResults.length),
         },
         {
           type: "spring",
@@ -194,7 +194,9 @@ function App() {
   }, [loading, results, animationControl, animateRetract]);
 
   useEffect(() => {
-    if (!value && oldValue.current) {
+    const { current: previousValue } = oldValue;
+
+    if (!value && previousValue) {
       (async function () {
         await animationControl.start(
           {
@@ -227,47 +229,43 @@ function App() {
 
         <ResultList>
           <AnimatePresence>
-            {results.map((result, i) => {
+            {filteredResults.map((result, i) => {
               const { name } = result;
 
-              if (name) {
-                return (
-                  <ResultWrapper
-                    key={result.login}
+              return (
+                <ResultWrapper
+                  key={result.login}
+                  initial="hidden"
+                  animate="visible"
+                  exit="hidden"
+                  variants={resultItemVariant}
+                  custom={i}
+                >
+                  <Result
+                    href={result.url}
+                    target="_blank"
                     initial="hidden"
                     animate="visible"
                     exit="hidden"
-                    variants={resultItemVariant}
+                    variants={resultItemAnchorVariant}
                     custom={i}
+                    isLoading={loading}
                   >
-                    <Result
-                      href={result.url}
-                      target="_blank"
-                      initial="hidden"
-                      animate="visible"
-                      exit="hidden"
-                      variants={resultItemAnchorVariant}
-                      custom={i}
-                      isLoading={loading}
-                    >
-                      <UserInfo>
-                        <UserAvatar src={result.avatarUrl} alt={name} />
-                        <UserName>{name}</UserName>
-                        <UserLogin>@{result.login}</UserLogin>
-                      </UserInfo>
+                    <UserInfo>
+                      <LazyImage width={DIMENSIONS.AVATAR.SIZE} height={DIMENSIONS.AVATAR.SIZE} src={result.avatarUrl} alt={name || 'User avatar'} />
+                      <UserName>{name}</UserName>
+                      <UserLogin>@{result.login}</UserLogin>
+                    </UserInfo>
 
-                      <UserInfo>
-                        <RepositoriesIcon icon={faBox} />
-                        <Repositories>
-                          {result.repositories.totalCount}
-                        </Repositories>
-                      </UserInfo>
-                    </Result>
-                  </ResultWrapper>
-                );
-              }
-
-              return null;
+                    <UserInfo>
+                      <RepositoriesIcon icon={faBox} />
+                      <Repositories>
+                        {result.repositories.totalCount}
+                      </Repositories>
+                    </UserInfo>
+                  </Result>
+                </ResultWrapper>
+              );
             })}
           </AnimatePresence>
         </ResultList>
