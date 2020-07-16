@@ -108,22 +108,38 @@ interface ISearchQueryResult {
   };
 }
 
+enum DIALOG_LEVELS {
+  DEFAULT = "DEFAULT",
+  ERROR = "ERROR",
+}
+
+interface IDialogMessage {
+  level: DIALOG_LEVELS;
+  message: string;
+}
+
 /*
  * TODO:
  *  - Show "no results found" indicator
  *  - Error handling
  *
  *  BUGS:
- *  - Type something, wait for results, erase everything and after reaching value.length === 0, start typing again,
- *    The component will animate retract, but that's undesired
- *  - Handle weird search terms that produce API errors
+ *  - Type something that will fetch no results, then a little bit after the setTimeout to close it, erase everything.
+ *    The box will "wobble" doing what I think that is 2 animations at the same time
  * */
+
+let dialogTimeout: any;
+let isAnimatingRetract: boolean;
 
 function App() {
   const [value, setValue] = useState("");
   const [query, setQuery] = useState("");
-  const oldValue = useRef<string>();
-  const oldResultsLength = useRef<number>(0);
+  const [dialogMessage, setDialogMessage] = useState<IDialogMessage | null>(
+    null
+  );
+  const previousValue = useRef<string>();
+  const previousLoadingState = useRef<boolean>();
+  const previousResultsLength = useRef<number>(0);
   const { loading, data, error } = useQuery<ISearchQueryResult>(searchSchema, {
     variables: { query },
     skip: !query,
@@ -140,18 +156,45 @@ function App() {
   );
 
   const animateRetract = useCallback(() => {
-    return animationControl.start(
-      {
-        scaleY: 1,
-        scaleX: 1,
-      },
-      {
-        type: "spring",
-        mass: 0.6,
-        damping: 13,
-      }
-    );
+    isAnimatingRetract = true;
+
+    return animationControl
+      .start(
+        {
+          scaleY: 1,
+          scaleX: 1,
+        },
+        {
+          type: "spring",
+          mass: 0.6,
+          damping: 13,
+        }
+      )
+      .then(() => {
+        isAnimatingRetract = false;
+      });
   }, [animationControl]);
+
+  const dismissDialog = useCallback(() => {
+    clearTimeout(dialogTimeout);
+    setDialogMessage(null);
+  }, []);
+
+  const showDialog = useCallback(
+    (message: string, level: DIALOG_LEVELS = DIALOG_LEVELS.DEFAULT) => {
+      clearTimeout(dialogTimeout);
+
+      setDialogMessage({ level, message });
+
+      return new Promise((resolve) => {
+        dialogTimeout = setTimeout(() => {
+          dismissDialog();
+          resolve();
+        }, 2750);
+      });
+    },
+    [dismissDialog]
+  );
 
   const debouncedSearch = useMemo(() => {
     const debounced = debounce(onSearch, 400);
@@ -169,9 +212,10 @@ function App() {
   };
 
   useEffect(() => {
-    const { current: previousResultsLength } = oldResultsLength;
+    const hadResults = previousResultsLength.current > 0;
+    const wasLoading = previousLoadingState.current;
 
-    if (loading) {
+    if (loading && value) {
       const scaleIncrease = 0.03;
       const scaleY =
         getResultsWrapperScaleValue(filteredResults.length) + scaleIncrease;
@@ -188,7 +232,7 @@ function App() {
           type: "tween",
         }
       );
-    } else if (filteredResults.length) {
+    } else if (filteredResults.length && value) {
       animationControl.start(
         {
           scaleX: 1,
@@ -200,14 +244,11 @@ function App() {
           damping: 13,
         }
       );
-    } else if (filteredResults.length === 0 && previousResultsLength > 0) {
-      const scaleX = 1.03;
-      const scaleY = getResultsWrapperScaleValue(previousResultsLength) + 0.05;
-
+    } else if (filteredResults.length === 0 && hadResults && value) {
       animationControl.start(
         {
-          scaleX,
-          scaleY,
+          scaleX: 1,
+          scaleY: getResultsWrapperScaleValue(1),
         },
         {
           type: "spring",
@@ -216,14 +257,136 @@ function App() {
         }
       );
 
-      setTimeout(animateRetract, 300);
+      showDialog("No results found").then(() => {
+        setTimeout(animateRetract, 300); // waits a bit until dialog is gone
+      });
+    } else if (
+      wasLoading &&
+      filteredResults.length === 0 &&
+      !hadResults &&
+      value
+    ) {
+      animationControl.start(
+        {
+          scaleX: 1,
+          scaleY: getResultsWrapperScaleValue(1),
+        },
+        {
+          type: "spring",
+          stiffness: 40,
+          damping: 8,
+        }
+      );
+
+      showDialog("No results found").then(() => {
+        setTimeout(animateRetract, 300); // waits a bit until dialog is gone
+      });
+    } else if (!value && !isAnimatingRetract) {
+      animationControl.start(
+        {
+          scaleX: 1.03,
+          scaleY:
+            getResultsWrapperScaleValue(previousResultsLength.current) + 0.05,
+        },
+        {
+          type: "spring",
+          stiffness: 40,
+          damping: 8,
+        }
+      );
+
+      // TODO: the interval can be calculated
+      setTimeout(animateRetract, 500); // starts a bit before the items exit is done
     }
-  }, [loading, filteredResults, animationControl, animateRetract]);
+  }, [
+    value,
+    loading,
+    filteredResults,
+    animationControl,
+    animateRetract,
+    showDialog,
+  ]);
 
   useEffect(() => {
-    oldValue.current = value;
-    oldResultsLength.current = filteredResults.length;
-  }, [value, filteredResults]);
+    previousValue.current = value;
+    previousResultsLength.current = filteredResults.length;
+    previousLoadingState.current = loading;
+  }, [value, filteredResults, loading]);
+
+  useEffect(() => {
+    dismissDialog();
+  }, [value, dismissDialog]);
+
+  const renderResults = () => {
+    if (dialogMessage) {
+      return (
+        <ResultWrapper
+          initial="hidden"
+          animate="visible"
+          exit="hidden"
+          variants={resultItemVariant}
+          custom={1}
+        >
+          <Result
+            href="#"
+            target="_blank"
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            variants={resultItemAnchorVariant}
+            custom={1}
+            isLoading={loading}
+          >
+            <UserInfo>
+              <UserName>Oh shit!</UserName>
+            </UserInfo>
+          </Result>
+        </ResultWrapper>
+      );
+    }
+
+    return filteredResults.map((result, i) => {
+      const { name } = result;
+
+      return (
+        <ResultWrapper
+          key={`${result.login}${i}`}
+          initial="hidden"
+          animate="visible"
+          exit="hidden"
+          variants={resultItemVariant}
+          custom={i}
+        >
+          <Result
+            href={result.url}
+            target="_blank"
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            variants={resultItemAnchorVariant}
+            custom={i}
+            isLoading={loading}
+          >
+            <UserInfo>
+              <LazyImage
+                width={DIMENSIONS.AVATAR.SIZE}
+                height={DIMENSIONS.AVATAR.SIZE}
+                src={result.avatarUrl}
+                alt={name || "User avatar"}
+              />
+              <UserName>{name}</UserName>
+              <UserLogin>@{result.login}</UserLogin>
+            </UserInfo>
+
+            <UserInfo>
+              <RepositoriesIcon icon={faBox} />
+              <Repositories>{result.repositories.totalCount}</Repositories>
+            </UserInfo>
+          </Result>
+        </ResultWrapper>
+      );
+    });
+  };
 
   return (
     <Root>
@@ -236,51 +399,7 @@ function App() {
         />
 
         <ResultList>
-          <AnimatePresence>
-            {filteredResults.map((result, i) => {
-              const { name } = result;
-
-              return (
-                <ResultWrapper
-                  key={`${result.login}${i}`}
-                  initial="hidden"
-                  animate="visible"
-                  exit="hidden"
-                  variants={resultItemVariant}
-                  custom={i}
-                >
-                  <Result
-                    href={result.url}
-                    target="_blank"
-                    initial="hidden"
-                    animate="visible"
-                    exit="hidden"
-                    variants={resultItemAnchorVariant}
-                    custom={i}
-                    isLoading={loading}
-                  >
-                    <UserInfo>
-                      <LazyImage
-                        width={DIMENSIONS.AVATAR.SIZE}
-                        height={DIMENSIONS.AVATAR.SIZE}
-                        src={result.avatarUrl}
-                        alt={name || "User avatar"}
-                      />
-                      <UserName>{name}</UserName>
-                      <UserLogin>@{result.login}</UserLogin>
-                    </UserInfo>
-
-                    <UserInfo>
-                      <RepositoriesIcon icon={faBox} />
-                      <Repositories>
-                        {result.repositories.totalCount}
-                      </Repositories>
-                    </UserInfo>
-                  </Result>
-                </ResultWrapper>
-              );
-            })}
-          </AnimatePresence>
+          <AnimatePresence>{renderResults()}</AnimatePresence>
         </ResultList>
       </Content>
     </Root>
