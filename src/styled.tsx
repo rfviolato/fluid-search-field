@@ -187,3 +187,13 @@ const glow = keyframes`
 export const LoadingIcon = styled(FontAwesomeIcon)`
   animation: ${glow} 1200ms ease-in-out infinite;
 `;
+
+export const DialogIconWrapper = styled.div`
+  display: flex;
+  height: ${DIMENSIONS.RESULT.HEIGHT}px;
+  align-items: center;
+`;
+
+export const DialogIcon = styled(FontAwesomeIcon)`
+  font-size: 24px;
+`;

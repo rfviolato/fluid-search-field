@@ -10,7 +10,7 @@ import { useAnimation, Variants, AnimatePresence } from "framer-motion";
 import debounce from "lodash.debounce";
 import { gql } from "apollo-boost";
 import { useQuery } from "@apollo/react-hooks";
-import { faBox } from "@fortawesome/free-solid-svg-icons";
+import { faBox, faUserSlash } from "@fortawesome/free-solid-svg-icons";
 import {
   DIMENSIONS,
   Content,
@@ -25,6 +25,8 @@ import {
   UserInfo,
   UserLogin,
   UserName,
+  DialogIcon,
+  DialogIconWrapper,
 } from "./styled";
 import { LazyImage } from "./LazyImage";
 
@@ -129,7 +131,6 @@ interface IDialogMessage {
  * */
 
 let dialogTimeout: any;
-let isAnimatingRetract: boolean;
 
 function App() {
   const [value, setValue] = useState("");
@@ -156,23 +157,17 @@ function App() {
   );
 
   const animateRetract = useCallback(() => {
-    isAnimatingRetract = true;
-
-    return animationControl
-      .start(
-        {
-          scaleY: 1,
-          scaleX: 1,
-        },
-        {
-          type: "spring",
-          mass: 0.6,
-          damping: 13,
-        }
-      )
-      .then(() => {
-        isAnimatingRetract = false;
-      });
+    return animationControl.start(
+      {
+        scaleY: 1,
+        scaleX: 1,
+      },
+      {
+        type: "spring",
+        mass: 0.6,
+        damping: 13,
+      }
+    );
   }, [animationControl]);
 
   const dismissDialog = useCallback(() => {
@@ -258,7 +253,7 @@ function App() {
       );
 
       showDialog("No results found").then(() => {
-        setTimeout(animateRetract, 300); // waits a bit until dialog is gone
+        setTimeout(animateRetract, 300); // waits a bit until dialog element has exited
       });
     } else if (
       wasLoading &&
@@ -279,9 +274,9 @@ function App() {
       );
 
       showDialog("No results found").then(() => {
-        setTimeout(animateRetract, 300); // waits a bit until dialog is gone
+        setTimeout(animateRetract, 300); // waits a bit until dialog element has exited
       });
-    } else if (!value && !isAnimatingRetract) {
+    } else if (!value) {
       animationControl.start(
         {
           scaleX: 1.03,
@@ -338,7 +333,10 @@ function App() {
             isLoading={loading}
           >
             <UserInfo>
-              <UserName>Oh shit!</UserName>
+              <DialogIconWrapper>
+                <DialogIcon icon={faUserSlash} />
+              </DialogIconWrapper>
+              <UserName>{dialogMessage.message}</UserName>
             </UserInfo>
           </Result>
         </ResultWrapper>
