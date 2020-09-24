@@ -8,8 +8,7 @@ import React, {
 } from "react";
 import { useAnimation, Variants, AnimatePresence } from "framer-motion";
 import debounce from "lodash.debounce";
-import { gql } from "apollo-boost";
-import { useQuery } from "@apollo/react-hooks";
+import { gql, useQuery } from "@apollo/client";
 import { faBox, faUserSlash } from "@fortawesome/free-solid-svg-icons";
 import {
   DIMENSIONS,
@@ -35,6 +34,8 @@ const searchSchema = gql`
     search(query: $query, type: USER, first: 10) {
       userCount
       nodes {
+        __typename
+
         ... on User {
           avatarUrl
           name
@@ -94,6 +95,7 @@ const resultItemAnchorVariant: Variants = {
 };
 
 interface IQueryResultUser {
+  __typename: string;
   avatarUrl: string;
   name: string | null;
   url: string;
@@ -122,7 +124,6 @@ interface IDialogMessage {
 
 /*
  * TODO:
- *  - Show "no results found" indicator
  *  - Error handling
  *
  *  BUGS:
@@ -152,7 +153,8 @@ function App() {
   );
   const results = data ? data.search.nodes : [];
   const filteredResults = useMemo(
-    () => results.filter((result) => !!result.name),
+    () =>
+      results.filter((result) => !!result.name && result.__typename === "User"),
     [results]
   );
 
