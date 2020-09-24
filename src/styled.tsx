@@ -15,6 +15,14 @@ interface ImgProps {
   isDisplayed?: boolean;
 }
 
+interface DialogIconProps {
+  danger?: boolean;
+}
+
+interface UserNameProps {
+  danger?: boolean;
+}
+
 export const DIMENSIONS = {
   INPUT: {
     INITIAL_WIDTH: 400,
@@ -28,6 +36,8 @@ export const DIMENSIONS = {
     SIZE: 40,
   },
 };
+
+const DANGER_COLOR = "#ff3636";
 
 export const Root = styled.div`
   display: flex;
@@ -115,7 +125,7 @@ export const Result = styled(motion.a)<ResultProps>`
   }
 `;
 
-export const UserName = styled.span`
+export const UserName = styled.span<UserNameProps>`
   display: inline-block;
   margin-left: 8px;
   font-size: 14px;
@@ -124,6 +134,7 @@ export const UserName = styled.span`
   text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
+  color: ${({ danger }) => (danger ? DANGER_COLOR : "inherit")};
 `;
 
 export const UserLogin = styled.span`
@@ -194,6 +205,7 @@ export const DialogIconWrapper = styled.div`
   align-items: center;
 `;
 
-export const DialogIcon = styled(FontAwesomeIcon)`
+export const DialogIcon = styled(FontAwesomeIcon)<DialogIconProps>`
+  color: ${({ danger }) => (danger ? DANGER_COLOR : "inherit")};
   font-size: 24px;
 `;

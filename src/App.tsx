@@ -9,7 +9,11 @@ import React, {
 import { useAnimation, Variants, AnimatePresence } from "framer-motion";
 import debounce from "lodash.debounce";
 import { gql, useQuery } from "@apollo/client";
-import { faBox, faUserSlash } from "@fortawesome/free-solid-svg-icons";
+import {
+  faBox,
+  faUserSlash,
+  faExclamationTriangle,
+} from "@fortawesome/free-solid-svg-icons";
 import {
   DIMENSIONS,
   Content,
@@ -129,6 +133,7 @@ interface IDialogMessage {
  *  BUGS:
  *  - Type something that will fetch no results, then a little bit after the setTimeout to close it, erase everything.
  *    The box will "wobble" doing what I think that is 2 animations at the same time
+ *  - Results' title and username are wobbling on Firefox (also check Safari)
  * */
 
 let dialogTimeout: any;
@@ -212,7 +217,24 @@ function App() {
     const hadResults = previousResultsLength.current > 0;
     const wasLoading = previousLoadingState.current;
 
-    if (loading && value) {
+    if (wasLoading && error) {
+      animationControl.start(
+        {
+          scaleX: 1,
+          scaleY: getResultsWrapperScaleValue(1),
+        },
+        {
+          type: "spring",
+          stiffness: 40,
+          damping: 8,
+        }
+      );
+
+      showDialog("Shit happened", DIALOG_LEVELS.ERROR).then(() => {
+        setTimeout(animateRetract, 300); // waits a bit until dialog element has exited
+      });
+    } else if (loading && value) {
+      // Do the breathing animation
       const scaleIncrease = 0.03;
       const scaleY =
         getResultsWrapperScaleValue(filteredResults.length) + scaleIncrease;
@@ -230,6 +252,7 @@ function App() {
         }
       );
     } else if (filteredResults.length && value) {
+      // Animate expand to show results
       animationControl.start(
         {
           scaleX: 1,
@@ -279,6 +302,7 @@ function App() {
         setTimeout(animateRetract, 300); // waits a bit until dialog element has exited
       });
     } else if (!value) {
+      // Animate retract
       animationControl.start(
         {
           scaleX: 1.03,
@@ -314,7 +338,21 @@ function App() {
     dismissDialog();
   }, [value, dismissDialog]);
 
+  const renderDialogIcon = (dialogLevel: DIALOG_LEVELS) => {
+    if (dialogLevel === DIALOG_LEVELS.DEFAULT) {
+      return <DialogIcon icon={faUserSlash} />;
+    }
+
+    if (dialogLevel === DIALOG_LEVELS.ERROR) {
+      return <DialogIcon danger icon={faExclamationTriangle} />;
+    }
+
+    return null;
+  };
+
   const renderResults = () => {
+    const isDanger = dialogMessage?.level === DIALOG_LEVELS.ERROR;
+
     if (dialogMessage) {
       return (
         <ResultWrapper
@@ -336,9 +374,9 @@ function App() {
           >
             <UserInfo>
               <DialogIconWrapper>
-                <DialogIcon icon={faUserSlash} />
+                {renderDialogIcon(dialogMessage.level)}
               </DialogIconWrapper>
-              <UserName>{dialogMessage.message}</UserName>
+              <UserName danger={isDanger}>{dialogMessage.message}</UserName>
             </UserInfo>
           </Result>
         </ResultWrapper>
