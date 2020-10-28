@@ -90,11 +90,12 @@ const resultItemAnchorVariant: Variants = {
     y: 0,
     transition: {
       type: "spring",
+      damping: 50,
       delay: i * 0.15,
     },
   }),
   hidden: {
-    y: -3,
+    y: -10,
   },
 };
 
@@ -125,14 +126,6 @@ interface IDialogMessage {
   level: DIALOG_LEVELS;
   message: string;
 }
-
-/*
- *  BUGS:
- *  - Queries that were already once queried, won't be re-displayed
- *  - Type something that will fetch no results, then a little bit after the setTimeout to close it, erase everything.
- *    The box will "wobble" doing what I think that is 2 animations at the same time
- *  - Results' title and username are wobbling on Firefox (also check Safari)
- * */
 
 let dialogTimeout: any;
 
@@ -219,6 +212,7 @@ function App() {
         {
           scaleX: 1,
           scaleY: getResultsWrapperScaleValue(1),
+          rotate: 0.01, // Firefox scale fix
         },
         {
           type: "spring",
@@ -239,6 +233,7 @@ function App() {
         {
           scaleY,
           scaleX: 1.03,
+          rotate: 0.01, // Firefox scale fix
         },
         {
           duration: 0.8,
@@ -254,6 +249,7 @@ function App() {
         {
           scaleY,
           scaleX: 1,
+          rotate: 0.01, // Firefox scale fix
         },
         {
           type: "spring",
@@ -268,11 +264,12 @@ function App() {
         {
           scaleY,
           scaleX: 1,
+          rotate: 0.01, // Firefox scale fix
         },
         {
           type: "spring",
           stiffness: 40,
-          damping: 8,
+          damping: 12,
         }
       );
 
@@ -291,6 +288,7 @@ function App() {
         {
           scaleY,
           scaleX: 1,
+          rotate: 0.01, // Firefox scale fix
         },
         {
           type: "spring",

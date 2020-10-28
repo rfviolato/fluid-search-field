@@ -1,14 +1,20 @@
-import React, { FC, ImgHTMLAttributes, useState, useEffect } from 'react';
-import { faImage } from '@fortawesome/free-solid-svg-icons';
-import { ImageWrapper, Img, LoadingIcon, LoadingIconWrapper } from './styled';
+import React, { FC, ImgHTMLAttributes, useState, useEffect } from "react";
+import { faImage } from "@fortawesome/free-solid-svg-icons";
+import { ImageWrapper, Img, LoadingIcon, LoadingIconWrapper } from "./styled";
 
 interface ImageProps extends ImgHTMLAttributes<HTMLImageElement> {
   width: number;
   height: number;
-};
+}
 
-export const LazyImage: FC<ImageProps> = ({ src, width, height, className, ...props }) => {
-  const [imageSrc, setImageSrc] = useState('');
+export const LazyImage: FC<ImageProps> = ({
+  src,
+  width,
+  height,
+  className,
+  ...props
+}) => {
+  const [imageSrc, setImageSrc] = useState("");
   const [isImageDisplayed, setImageDisplayed] = useState(false);
 
   useEffect(() => {
@@ -30,11 +36,17 @@ export const LazyImage: FC<ImageProps> = ({ src, width, height, className, ...pr
     return () => {
       preloadImg.remove();
     };
-  }, [src, width, height])
+  }, [src, width, height]);
 
   return (
     <ImageWrapper>
-      <Img {...props} src={imageSrc} isDisplayed={isImageDisplayed} alt={props.alt} className={className} />
+      <Img
+        {...props}
+        src={imageSrc}
+        isDisplayed={isImageDisplayed}
+        alt={props.alt}
+        className={className}
+      />
 
       <LoadingIconWrapper isDisplayed={!imageSrc}>
         <LoadingIcon icon={faImage} />
