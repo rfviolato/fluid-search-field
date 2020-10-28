@@ -347,7 +347,7 @@ function App() {
     if (!value && previousValue.current) {
       setLocalResults([]);
       setLocalLoading(false);
-    } else if (data) {
+    } else if (data && value) {
       const filteredResults = results.filter(
         (result) => !!result.name && result.__typename === "User"
       );
