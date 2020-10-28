@@ -127,10 +127,8 @@ interface IDialogMessage {
 }
 
 /*
- * TODO:
- *  - Error handling
- *
  *  BUGS:
+ *  - Queries that were already once queried, won't be re-displayed
  *  - Type something that will fetch no results, then a little bit after the setTimeout to close it, erase everything.
  *    The box will "wobble" doing what I think that is 2 animations at the same time
  *  - Results' title and username are wobbling on Firefox (also check Safari)
@@ -141,27 +139,26 @@ let dialogTimeout: any;
 function App() {
   const [value, setValue] = useState("");
   const [query, setQuery] = useState("");
+  const [localResults, setLocalResults] = useState<IQueryResultUser[]>([]);
+  const [localLoading, setLocalLoading] = useState(false);
   const [dialogMessage, setDialogMessage] = useState<IDialogMessage | null>(
     null
   );
   const previousValue = useRef<string>();
   const previousLoadingState = useRef<boolean>();
+  const previousLocalLoadingState = useRef<boolean>();
   const previousResultsLength = useRef<number>(0);
   const { loading, data, error } = useQuery<ISearchQueryResult>(searchSchema, {
     variables: { query },
     skip: !query,
   });
+  console.log({ data });
   const animationControl = useAnimation();
   const onSearch = useCallback(
     ({ target: { value } }: ChangeEvent<HTMLInputElement>) => setQuery(value),
     [setQuery]
   );
   const results = data ? data.search.nodes : [];
-  const filteredResults = useMemo(
-    () =>
-      results.filter((result) => !!result.name && result.__typename === "User"),
-    [results]
-  );
 
   const animateRetract = useCallback(() => {
     return animationControl.start(
@@ -215,7 +212,7 @@ function App() {
 
   useEffect(() => {
     const hadResults = previousResultsLength.current > 0;
-    const wasLoading = previousLoadingState.current;
+    const wasLoading = previousLocalLoadingState.current;
 
     if (wasLoading && error) {
       animationControl.start(
@@ -233,11 +230,10 @@ function App() {
       showDialog("Shit happened", DIALOG_LEVELS.ERROR).then(() => {
         setTimeout(animateRetract, 300); // waits a bit until dialog element has exited
       });
-    } else if (loading && value) {
-      // Do the breathing animation
+    } else if (localLoading && value) {
       const scaleIncrease = 0.03;
       const scaleY =
-        getResultsWrapperScaleValue(filteredResults.length) + scaleIncrease;
+        getResultsWrapperScaleValue(localResults.length) + scaleIncrease;
 
       animationControl.start(
         {
@@ -251,12 +247,13 @@ function App() {
           type: "tween",
         }
       );
-    } else if (filteredResults.length && value) {
-      // Animate expand to show results
+    } else if (localResults.length && value) {
+      const scaleY = getResultsWrapperScaleValue(localResults.length);
+
       animationControl.start(
         {
+          scaleY,
           scaleX: 1,
-          scaleY: getResultsWrapperScaleValue(filteredResults.length),
         },
         {
           type: "spring",
@@ -264,11 +261,13 @@ function App() {
           damping: 13,
         }
       );
-    } else if (filteredResults.length === 0 && hadResults && value) {
+    } else if (localResults.length === 0 && hadResults && value) {
+      const scaleY = getResultsWrapperScaleValue(1);
+
       animationControl.start(
         {
+          scaleY,
           scaleX: 1,
-          scaleY: getResultsWrapperScaleValue(1),
         },
         {
           type: "spring",
@@ -282,14 +281,16 @@ function App() {
       });
     } else if (
       wasLoading &&
-      filteredResults.length === 0 &&
+      localResults.length === 0 &&
       !hadResults &&
       value
     ) {
+      const scaleY = getResultsWrapperScaleValue(1);
+
       animationControl.start(
         {
+          scaleY,
           scaleX: 1,
-          scaleY: getResultsWrapperScaleValue(1),
         },
         {
           type: "spring",
@@ -302,12 +303,13 @@ function App() {
         setTimeout(animateRetract, 300); // waits a bit until dialog element has exited
       });
     } else if (!value) {
-      // Animate retract
+      const scaleY =
+        getResultsWrapperScaleValue(previousResultsLength.current) + 0.05;
+
       animationControl.start(
         {
+          scaleY,
           scaleX: 1.03,
-          scaleY:
-            getResultsWrapperScaleValue(previousResultsLength.current) + 0.05,
         },
         {
           type: "spring",
@@ -321,18 +323,45 @@ function App() {
     }
   }, [
     value,
-    loading,
-    filteredResults,
+    localLoading,
+    localResults,
     animationControl,
     animateRetract,
     showDialog,
+    error,
   ]);
 
   useEffect(() => {
+    const wasLoading = previousLoadingState.current;
+
+    if (loading) {
+      setLocalLoading(true);
+    }
+
+    if (wasLoading && !loading) {
+      setLocalLoading(false);
+    }
+  }, [loading, results, value]);
+
+  useEffect(() => {
+    if (!value && previousValue.current) {
+      setLocalResults([]);
+      setLocalLoading(false);
+    } else if (data) {
+      const filteredResults = results.filter(
+        (result) => !!result.name && result.__typename === "User"
+      );
+
+      setLocalResults(filteredResults);
+    }
+  }, [data, value]);
+
+  useEffect(() => {
     previousValue.current = value;
-    previousResultsLength.current = filteredResults.length;
+    previousResultsLength.current = localResults.length;
     previousLoadingState.current = loading;
-  }, [value, filteredResults, loading]);
+    previousLocalLoadingState.current = localLoading;
+  }, [value, localResults, localLoading, loading]);
 
   useEffect(() => {
     dismissDialog();
@@ -383,7 +412,7 @@ function App() {
       );
     }
 
-    return filteredResults.map((result, i) => {
+    return localResults.map((result, i) => {
       const { name } = result;
 
       return (
@@ -403,7 +432,7 @@ function App() {
             exit="hidden"
             variants={resultItemAnchorVariant}
             custom={i}
-            isLoading={loading}
+            isLoading={localLoading}
           >
             <UserInfo>
               <LazyImage
