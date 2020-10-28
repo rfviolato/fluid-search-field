@@ -152,7 +152,6 @@ function App() {
     variables: { query },
     skip: !query,
   });
-  console.log({ data });
   const animationControl = useAnimation();
   const onSearch = useCallback(
     ({ target: { value } }: ChangeEvent<HTMLInputElement>) => setQuery(value),
@@ -212,6 +211,7 @@ function App() {
 
   useEffect(() => {
     const hadResults = previousResultsLength.current > 0;
+    const hadValue = previousValue.current;
     const wasLoading = previousLocalLoadingState.current;
 
     if (wasLoading && error) {
@@ -302,7 +302,7 @@ function App() {
       showDialog("No results found").then(() => {
         setTimeout(animateRetract, 300); // waits a bit until dialog element has exited
       });
-    } else if (!value) {
+    } else if (!value && hadValue) {
       const scaleY =
         getResultsWrapperScaleValue(previousResultsLength.current) + 0.05;
 
@@ -341,7 +341,7 @@ function App() {
     if (wasLoading && !loading) {
       setLocalLoading(false);
     }
-  }, [loading, results, value]);
+  }, [loading]);
 
   useEffect(() => {
     if (!value && previousValue.current) {
