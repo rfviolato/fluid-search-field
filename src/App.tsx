@@ -456,16 +456,17 @@ function App() {
   return (
     <Root>
       <Content>
-        <SearchFieldWrapper animate={animationControl} />
-        <SearchField
-          type="text"
-          placeholder="type something..."
-          onChange={onChange}
-        />
-
-        <ResultList>
-          <AnimatePresence>{renderResults()}</AnimatePresence>
-        </ResultList>
+        <div>
+          <SearchFieldWrapper animate={animationControl} />
+          <SearchField
+            type="text"
+            placeholder="search for github user profiles"
+            onChange={onChange}
+          />
+          <ResultList>
+            <AnimatePresence>{renderResults()}</AnimatePresence>
+          </ResultList>
+        </div>
       </Content>
     </Root>
   );
