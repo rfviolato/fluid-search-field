@@ -6,3 +6,6 @@ Github profiles search field with fluid spring animations.
 ## Motivation
 
 I wanted to try out spring animations for the first time, so chose to build a search field with auto-suggestions and use [framer-motion](https://www.framer.com/motion/) to manage the micro-interactions animations.
+
+## Notes
+Due to some Firefox rendering engine differences, you can have the best experience using Chrome or Safari.
