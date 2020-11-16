@@ -59,7 +59,8 @@ function getResultsWrapperScaleValue(
   maxResultsDisplayed: number = 5
 ): number {
   const initialHeight = DIMENSIONS.INPUT.INITIAL_HEIGHT;
-  const resultHeight = DIMENSIONS.RESULT.HEIGHT + DIMENSIONS.RESULT.BORDER; // border;
+  const resultHeight = DIMENSIONS.RESULT.HEIGHT + DIMENSIONS.RESULT.BORDER;
+
   const resultsToMeasure =
     numberOfResults > maxResultsDisplayed
       ? maxResultsDisplayed
@@ -208,6 +209,7 @@ function App() {
     const wasLoading = previousLocalLoadingState.current;
 
     if (wasLoading && error) {
+      // Error handling
       animationControl.start(
         {
           scaleX: 1,
@@ -225,6 +227,7 @@ function App() {
         setTimeout(animateRetract, 300); // waits a bit until dialog element has exited
       });
     } else if (localLoading && value) {
+      // Loading
       const scaleIncrease = 0.03;
       const scaleY =
         getResultsWrapperScaleValue(localResults.length) + scaleIncrease;
@@ -243,6 +246,7 @@ function App() {
         }
       );
     } else if (localResults.length && value) {
+      // Show results
       const scaleY = getResultsWrapperScaleValue(localResults.length);
 
       animationControl.start(
@@ -258,6 +262,7 @@ function App() {
         }
       );
     } else if (localResults.length === 0 && hadResults && value) {
+      // No results found when there were results previously
       const scaleY = getResultsWrapperScaleValue(1);
 
       animationControl.start(
@@ -269,7 +274,7 @@ function App() {
         {
           type: "spring",
           stiffness: 40,
-          damping: 12,
+          damping: 8,
         }
       );
 
@@ -282,6 +287,7 @@ function App() {
       !hadResults &&
       value
     ) {
+      // No results found when there were no results previously
       const scaleY = getResultsWrapperScaleValue(1);
 
       animationControl.start(
@@ -301,6 +307,7 @@ function App() {
         setTimeout(animateRetract, 300); // waits a bit until dialog element has exited
       });
     } else if (!value && hadValue) {
+      // Search field has been cleared
       const scaleY =
         getResultsWrapperScaleValue(previousResultsLength.current) + 0.05;
 

@@ -47,7 +47,6 @@ export const Root = styled.div`
   background: cornflowerblue;
   font-size: 24px;
   font-family: sans-serif;
-  padding-top: 20%;
 
   * {
     box-sizing: border-box;
@@ -55,6 +54,7 @@ export const Root = styled.div`
 `;
 
 export const Content = styled.div`
+  margin-top: 25vh;
   position: relative;
 `;
 
@@ -99,7 +99,7 @@ export const ResultList = styled.ul`
   padding: 0;
   margin: 0;
   max-height: 300px;
-  overflow: auto;
+  overflow: hidden;
 `;
 
 export const ResultWrapper = styled(motion.li)`
@@ -107,7 +107,7 @@ export const ResultWrapper = styled(motion.li)`
   overflow: hidden;
 `;
 
-export const Result = styled(motion.a)<ResultProps>`
+export const Result = styled(motion.a) <ResultProps>`
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -205,7 +205,7 @@ export const DialogIconWrapper = styled.div`
   align-items: center;
 `;
 
-export const DialogIcon = styled(FontAwesomeIcon)<DialogIconProps>`
+export const DialogIcon = styled(FontAwesomeIcon) <DialogIconProps>`
   color: ${({ danger }) => (danger ? DANGER_COLOR : "inherit")};
   font-size: 24px;
 `;
