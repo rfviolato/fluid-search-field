@@ -141,7 +141,7 @@ function App() {
   const previousValue = useRef<string>();
   const previousLoadingState = useRef<boolean>();
   const previousLocalLoadingState = useRef<boolean>();
-  const previousResultsLength = useRef<number>(0);
+  const previousLocalResultsLength = useRef<number>(0);
   const { loading, data, error } = useQuery<ISearchQueryResult>(searchSchema, {
     variables: { query },
     skip: !query,
@@ -204,137 +204,9 @@ function App() {
   };
 
   useEffect(() => {
-    const hadResults = previousResultsLength.current > 0;
-    const hadValue = previousValue.current;
-    const wasLoading = previousLocalLoadingState.current;
-
-    if (wasLoading && error) {
-      // Error handling
-      animationControl.start(
-        {
-          scaleX: 1,
-          scaleY: getResultsWrapperScaleValue(1),
-          rotate: 0.01, // Firefox scale fix
-        },
-        {
-          type: "spring",
-          stiffness: 40,
-          damping: 8,
-        }
-      );
-
-      showDialog("Shit happened", DIALOG_LEVELS.ERROR).then(() => {
-        setTimeout(animateRetract, 300); // waits a bit until dialog element has exited
-      });
-    } else if (localLoading && value) {
-      // Loading
-      const scaleIncrease = 0.03;
-      const scaleY =
-        getResultsWrapperScaleValue(localResults.length) + scaleIncrease;
-
-      animationControl.start(
-        {
-          scaleY,
-          scaleX: 1.03,
-          rotate: 0.01, // Firefox scale fix
-        },
-        {
-          duration: 0.8,
-          yoyo: Infinity,
-          ease: "easeInOut",
-          type: "tween",
-        }
-      );
-    } else if (localResults.length && value) {
-      // Show results
-      const scaleY = getResultsWrapperScaleValue(localResults.length);
-
-      animationControl.start(
-        {
-          scaleY,
-          scaleX: 1,
-          rotate: 0.01, // Firefox scale fix
-        },
-        {
-          type: "spring",
-          mass: 0.8,
-          damping: 13,
-        }
-      );
-    } else if (localResults.length === 0 && hadResults && value) {
-      // No results found when there were results previously
-      const scaleY = getResultsWrapperScaleValue(1);
-
-      animationControl.start(
-        {
-          scaleY,
-          scaleX: 1,
-          rotate: 0.01, // Firefox scale fix
-        },
-        {
-          type: "spring",
-          stiffness: 40,
-          damping: 8,
-        }
-      );
-
-      showDialog("No results found").then(() => {
-        setTimeout(animateRetract, 300); // waits a bit until dialog element has exited
-      });
-    } else if (
-      wasLoading &&
-      localResults.length === 0 &&
-      !hadResults &&
-      value
-    ) {
-      // No results found when there were no results previously
-      const scaleY = getResultsWrapperScaleValue(1);
-
-      animationControl.start(
-        {
-          scaleY,
-          scaleX: 1,
-          rotate: 0.01, // Firefox scale fix
-        },
-        {
-          type: "spring",
-          stiffness: 40,
-          damping: 8,
-        }
-      );
-
-      showDialog("No results found").then(() => {
-        setTimeout(animateRetract, 300); // waits a bit until dialog element has exited
-      });
-    } else if (!value && hadValue) {
-      // Search field has been cleared
-      const scaleY =
-        getResultsWrapperScaleValue(previousResultsLength.current) + 0.05;
-
-      animationControl.start(
-        {
-          scaleY,
-          scaleX: 1.03,
-        },
-        {
-          type: "spring",
-          stiffness: 40,
-          damping: 8,
-        }
-      );
-
-      // TODO: the interval can be calculated
-      setTimeout(animateRetract, 500); // starts a bit before the items exit is done
-    }
-  }, [
-    value,
-    localLoading,
-    localResults,
-    animationControl,
-    animateRetract,
-    showDialog,
-    error,
-  ]);
+    // Dismisses dialog when input changes
+    dismissDialog();
+  }, [value, dismissDialog]);
 
   useEffect(() => {
     const wasLoading = previousLoadingState.current;
@@ -359,18 +231,148 @@ function App() {
 
       setLocalResults(filteredResults);
     }
-  }, [data, value]);
+  }, [data, value, results]);
+
+  useEffect(() => {
+    if (localLoading && value) {
+      // Loading
+      const scaleIncrease = 0.03;
+      const scaleY =
+        getResultsWrapperScaleValue(localResults.length) + scaleIncrease;
+
+      animationControl.start(
+        {
+          scaleY,
+          scaleX: 1.03,
+          rotate: 0.01, // Firefox scale fix
+        },
+        {
+          duration: 0.8,
+          yoyo: Infinity,
+          ease: "easeInOut",
+          type: "tween",
+        }
+      );
+    }
+  }, [value, localLoading, animationControl, localResults.length]);
+
+  useEffect(() => {
+    const hadValue = previousValue.current;
+
+    if (!value && hadValue) {
+      // Search field has been cleared
+      const scaleY =
+        getResultsWrapperScaleValue(previousLocalResultsLength.current) + 0.05;
+
+      animationControl.start(
+        {
+          scaleY,
+          scaleX: 1.03,
+        },
+        {
+          type: "spring",
+          stiffness: 40,
+          damping: 8,
+        }
+      );
+
+      // TODO: the interval can be calculated
+      setTimeout(animateRetract, 500); // starts a bit before the items exit is done
+    }
+  }, [value, previousValue, animateRetract, animationControl]);
+
+  useEffect(() => {
+    const wasLoading = previousLocalLoadingState.current;
+
+    if (localLoading || !value) {
+      return;
+    }
+
+    // TODO: check if `wasLoading` can be replaced by `hasInputChanged`
+    // And if it can be moved to its custom hook
+    if (wasLoading && error) {
+      // Error handling
+      animationControl.start(
+        {
+          scaleX: 1,
+          scaleY: getResultsWrapperScaleValue(1),
+          rotate: 0.01, // Firefox scale fix
+        },
+        {
+          type: "spring",
+          stiffness: 40,
+          damping: 8,
+        }
+      );
+
+      showDialog("Shit happened", DIALOG_LEVELS.ERROR).then(() => {
+        setTimeout(animateRetract, 300); // waits a bit until dialog element has exited
+      });
+
+      return;
+    }
+
+    if (localResults.length && query) {
+      // Show results
+      const scaleY = getResultsWrapperScaleValue(localResults.length);
+
+      animationControl.start(
+        {
+          scaleY,
+          scaleX: 1,
+          rotate: 0.01, // Firefox scale fix
+        },
+        {
+          type: "spring",
+          mass: 0.8,
+          damping: 13,
+        }
+      );
+
+      return;
+    }
+
+    if (!loading && !localResults.length && query) {
+      // No results found
+      const scaleY = getResultsWrapperScaleValue(1);
+
+      animationControl.start(
+        {
+          scaleY,
+          scaleX: 1,
+          rotate: 0.01, // Firefox scale fix
+        },
+        {
+          type: "spring",
+          stiffness: 40,
+          damping: 10,
+        }
+      );
+
+      showDialog("No results found").then(() => {
+        setTimeout(animateRetract, 300); // waits a bit until dialog element has exited
+      });
+
+      return;
+    }
+  }, [
+    value,
+    query,
+    error,
+    loading,
+    localLoading,
+    localResults,
+    animationControl,
+    animateRetract,
+    showDialog,
+  ]);
 
   useEffect(() => {
     previousValue.current = value;
-    previousResultsLength.current = localResults.length;
+    previousLocalResultsLength.current = localResults.length;
     previousLoadingState.current = loading;
     previousLocalLoadingState.current = localLoading;
   }, [value, localResults, localLoading, loading]);
-
-  useEffect(() => {
-    dismissDialog();
-  }, [value, dismissDialog]);
 
   const renderDialogIcon = (dialogLevel: DIALOG_LEVELS) => {
     if (dialogLevel === DIALOG_LEVELS.DEFAULT) {
